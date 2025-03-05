@@ -16,14 +16,14 @@ volatile bool neoPixelState = false; // Trạng thái của LED NeoPixel
 constexpr char WIFI_SSID[] = "Duong";
 constexpr char WIFI_PASSWORD[] = "ssssssss";
 
-constexpr char TOKEN[] = "o7727m2w21u0gnfj0urc";
+constexpr char TOKEN[] = "p3mj0innnhsd4yap48ve";
 
 constexpr char THINGSBOARD_SERVER[] = "app.coreiot.io";
 constexpr uint16_t THINGSBOARD_PORT = 1883U;
 
-constexpr char MQTT_CLIENT_ID[] = "pk953x4l3gocac91q792";
-constexpr char MQTT_USER[] = "u7o0ijppct005wrr2r22";
-constexpr char MQTT_PASSWORD[] = "ug6bx7oenuthcceh9xzs";
+constexpr char MQTT_CLIENT_ID[] = "CP";
+constexpr char MQTT_USER[] = "CP";
+constexpr char MQTT_PASSWORD[] = "CP";
 
 constexpr uint32_t MAX_MESSAGE_SIZE = 1024U;
 constexpr uint32_t SERIAL_DEBUG_BAUD = 115200U;
