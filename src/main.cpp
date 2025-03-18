@@ -3,6 +3,7 @@
 #define LED_PIN 48
 #define SDA_PIN GPIO_NUM_11
 #define SCL_PIN GPIO_NUM_12
+#define LIGHT_SENSOR_PIN 1 // A0
 
 #include <WiFi.h>
 #include <Arduino_MQTT_Client.h>
@@ -232,6 +233,15 @@ void coreIoTConnectTask(void *pvParameters) {
       }
   }
 
+  void lightSensorTask(void *pvParameters) {
+    while (true) {
+      int lightValue = analogRead(LIGHT_SENSOR_PIN);
+      Serial.print("Light Sensor Value: ");
+      Serial.println(lightValue);
+      tb.sendTelemetryData("light", lightValue);
+      vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
+    }
+  }
 
   void tbLoopTask(void *pvParameters) {
     while (true) {
@@ -257,6 +267,7 @@ void setup() {
   xTaskCreate(sendTelemetryTask, "sendTelemetryTask", 4096, NULL, 2, NULL);
   xTaskCreate(tbLoopTask, "tbLoopTask", 4096, NULL, 1, NULL);
   xTaskCreate(neoPixelTask, "neoPixelTask", 2048, NULL, 2, NULL);
+  xTaskCreate(lightSensorTask, "lightSensorTask", 2048, NULL, 2, NULL);
 }
 
 void loop() {
