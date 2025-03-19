@@ -16,7 +16,7 @@ void neoPixelTask(void *pvParameters) {
 
     while (true) {
         if (neoPixelState) {
-            pixels.setPixelColor(0, pixels.Color(255, 0, 0)); // Xanh lá khi bật
+            pixels.setPixelColor(0, pixels.Color(0, 255, 0)); // Xanh lá khi bật
         } else {
             pixels.setPixelColor(0, pixels.Color(0, 0, 0)); // Đỏ khi tắt
         }

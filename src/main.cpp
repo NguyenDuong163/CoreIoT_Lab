@@ -1,9 +1,11 @@
 #include "ExternalLedControl.h"
+#include "PumpControl.h"
 
 #define LED_PIN 48
 #define SDA_PIN GPIO_NUM_11
 #define SCL_PIN GPIO_NUM_12
-#define LIGHT_SENSOR_PIN 1 // A0
+#define LIGHT_SENSOR_PIN 1 // A0-LUX
+#define MOIS_SENSOR_PIN  3 // A2-MOISTURE
 
 #include <WiFi.h>
 #include <Arduino_MQTT_Client.h>
@@ -36,10 +38,6 @@ volatile bool attributesChanged = false;
 
 volatile int ledMode = 0;
 volatile bool ledState = false;
-
-// constexpr uint16_t BLINKING_INTERVAL_MS_MIN = 10U;
-// constexpr uint16_t BLINKING_INTERVAL_MS_MAX = 60000U;
-// volatile uint16_t blinkingInterval = 1000U;
 
 uint32_t previousStateChange;
 
@@ -161,20 +159,17 @@ void coreIoTConnectTask(void *pvParameters) {
       Serial.println("Subscribing for RPC...");
       if (!tb.RPC_Subscribe(callbacks.cbegin(), callbacks.cend())) {
         Serial.println("Failed to subscribe for RPC");
-        // vTaskDelay(10 / portTICK_PERIOD_MS);
         continue;
       }
 
       // Đăng ký callback cho setExternLed //@
       if (!tb.RPC_Subscribe(exLed_callbacks.cbegin(), exLed_callbacks.cend())) {
         Serial.println("Failed to subscribe for external LED RPC");
-        // vTaskDelay(10 / portTICK_PERIOD_MS);
         continue;
       }
 
       if (!tb.Shared_Attributes_Subscribe(attributes_callback)) {
         Serial.println("Failed to subscribe for shared attribute updates");
-        // vTaskDelay(10 / portTICK_PERIOD_MS);
         continue;
       }
 
@@ -182,7 +177,6 @@ void coreIoTConnectTask(void *pvParameters) {
 
       if (!tb.Shared_Attributes_Request(attribute_shared_request_callback)) {
         Serial.println("Failed to request for shared attributes");
-        // vTaskDelay(10 / portTICK_PERIOD_MS);
         continue;
       }
     }
@@ -243,6 +237,18 @@ void coreIoTConnectTask(void *pvParameters) {
     }
   }
 
+  void moisSensorTask(void *pvParameters) {
+    while (true) {
+      int rawMoistureValue = analogRead(MOIS_SENSOR_PIN);
+      float moistureValue = (rawMoistureValue * 1.0 / 4095.0) * 100;
+      Serial.print("Moisture Sensor Value: ");
+      Serial.print(moistureValue);
+      Serial.println("%");
+      tb.sendTelemetryData("moisture", moistureValue);
+      vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
+    }
+  }
+
   void tbLoopTask(void *pvParameters) {
     while (true) {
       tb.loop();
@@ -268,6 +274,8 @@ void setup() {
   xTaskCreate(tbLoopTask, "tbLoopTask", 4096, NULL, 1, NULL);
   xTaskCreate(neoPixelTask, "neoPixelTask", 2048, NULL, 2, NULL);
   xTaskCreate(lightSensorTask, "lightSensorTask", 2048, NULL, 2, NULL);
+  xTaskCreate(moisSensorTask, "moisSensorTask", 2048, NULL, 2, NULL);
+  xTaskCreate(pumpTask, "pumpTask", 2048, NULL, 2, NULL);
 }
 
 void loop() {
