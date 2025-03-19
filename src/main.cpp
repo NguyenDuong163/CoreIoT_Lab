@@ -94,7 +94,7 @@ const Shared_Attribute_Callback attributes_callback(&processSharedAttributes, SH
 const Attribute_Request_Callback attribute_shared_request_callback(&processSharedAttributes, SHARED_ATTRIBUTES_LIST.cbegin(), SHARED_ATTRIBUTES_LIST.cend());
 
 void InitWiFi() {
-  Serial.println("Connecting to AP ...");
+  Serial.println("Connecting to WiFi ...");
   // Attempting to establish a connection to the given WiFi network
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
@@ -102,7 +102,7 @@ void InitWiFi() {
     delay(500);
     Serial.print(">");
   }
-  Serial.println("Connected to AP");
+  Serial.println("Connected to WiFi");
 }
 
 const bool reconnect() {
@@ -161,13 +161,24 @@ void coreIoTConnectTask(void *pvParameters) {
         Serial.println("Failed to subscribe for RPC");
         continue;
       }
-
+      //
+      //
+      //
       // Đăng ký callback cho setExternLed //@
       if (!tb.RPC_Subscribe(exLed_callbacks.cbegin(), exLed_callbacks.cend())) {
         Serial.println("Failed to subscribe for external LED RPC");
         continue;
       }
 
+      // Đăng ký callback cho setPump //@
+      if (!tb.RPC_Subscribe(pump_callbacks.cbegin(), pump_callbacks.cend())) {
+        Serial.println("Failed to subscribe for pump RPC");
+        continue;
+      }
+      //
+      //
+      //
+      //
       if (!tb.Shared_Attributes_Subscribe(attributes_callback)) {
         Serial.println("Failed to subscribe for shared attribute updates");
         continue;
@@ -185,78 +196,84 @@ void coreIoTConnectTask(void *pvParameters) {
 }
 
 
-  void sendAtributesTask(void *pvParameters) {
-    while (true) {
-      if (attributesChanged) {
-        attributesChanged = false;
-        tb.sendAttributeData(LED_STATE_ATTR, digitalRead(LED_PIN));
-      }
-
-      tb.sendAttributeData("rssi", WiFi.RSSI());
-      tb.sendAttributeData("channel", WiFi.channel());
-      tb.sendAttributeData("bssid", WiFi.BSSIDstr().c_str());
-      tb.sendAttributeData("localIp", WiFi.localIP().toString().c_str());
-      tb.sendAttributeData("ssid", WiFi.SSID().c_str());
-
-      vTaskDelay(1000 / portTICK_PERIOD_MS); //1s delay
+void sendAtributesTask(void *pvParameters) {
+  while (true) {
+    if (attributesChanged) {
+      attributesChanged = false;
+      tb.sendAttributeData(LED_STATE_ATTR, digitalRead(LED_PIN));
     }
+
+    tb.sendAttributeData("rssi", WiFi.RSSI());
+    tb.sendAttributeData("channel", WiFi.channel());
+    tb.sendAttributeData("bssid", WiFi.BSSIDstr().c_str());
+    tb.sendAttributeData("localIp", WiFi.localIP().toString().c_str());
+    tb.sendAttributeData("ssid", WiFi.SSID().c_str());
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS); //1s delay
   }
+}
 
 
-  void sendTelemetryTask(void *pvParameters) {
-    while (true) {
-        dht20.read();
-        
-        float temperature = dht20.getTemperature();
-        float humidity = dht20.getHumidity();
+void sendTelemetryTask(void *pvParameters) {
+  while (true) {
+      // dht20.read();
+      
+      // float temperature = dht20.getTemperature();
+      // float humidity = dht20.getHumidity();
+      
+      float temperature = 26.0; // fake data
+      float humidity = 20.0;    // fake data
+      // if (isnan(temperature) || isnan(humidity)) {
+      //   Serial.println("Failed to read from DHT20 sensor!");
+      // } else {
+      //   Serial.print("Temperature: ");
+      //   Serial.print(temperature);
+      //   Serial.print(" °C, Humidity: ");
+      //   Serial.print(humidity);
+      //   Serial.println(" %");
 
-        if (isnan(temperature) || isnan(humidity)) {
-          Serial.println("Failed to read from DHT20 sensor!");
-        } else {
-          Serial.print("Temperature: ");
-          Serial.print(temperature);
-          Serial.print(" °C, Humidity: ");
-          Serial.print(humidity);
-          Serial.println(" %");
+        tb.sendTelemetryData("temperature", temperature);
+        tb.sendTelemetryData("humidity", humidity);
+      //}
 
-          tb.sendTelemetryData("temperature", temperature);
-          tb.sendTelemetryData("humidity", humidity);
-        }
-
-        vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
-      }
-  }
-
-  void lightSensorTask(void *pvParameters) {
-    while (true) {
-      int lightValue = analogRead(LIGHT_SENSOR_PIN);
-      Serial.print("Light Sensor Value: ");
-      Serial.println(lightValue);
-      tb.sendTelemetryData("light", lightValue);
       vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
     }
-  }
+}
 
-  void moisSensorTask(void *pvParameters) {
-    while (true) {
-      int rawMoistureValue = analogRead(MOIS_SENSOR_PIN);
-      float moistureValue = (rawMoistureValue * 1.0 / 4095.0) * 100;
-      Serial.print("Moisture Sensor Value: ");
-      Serial.print(moistureValue);
-      Serial.println("%");
-      tb.sendTelemetryData("moisture", moistureValue);
-      vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
-    }
+void lightSensorTask(void *pvParameters) {
+  while (true) {
+    int lightValue = analogRead(LIGHT_SENSOR_PIN);
+    Serial.print("Light Sensor Value: ");
+    Serial.println(lightValue);
+    tb.sendTelemetryData("light", lightValue);
+    vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
   }
+}
 
-  void tbLoopTask(void *pvParameters) {
-    while (true) {
-      tb.loop();
-      vTaskDelay(10 / portTICK_PERIOD_MS); //10ms delay
-    }
+void moisSensorTask(void *pvParameters) {
+  while (true) {
+    int rawMoistureValue = analogRead(MOIS_SENSOR_PIN);
+    float moistureValue = (rawMoistureValue * 1.0 / 4095.0) * 100;
+    Serial.print("Moisture Sensor Value: ");
+    Serial.print(moistureValue);
+    Serial.println("%");
+    tb.sendTelemetryData("moisture", moistureValue);
+    vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
   }
+}
+
+void tbLoopTask(void *pvParameters) {
+  while (true) {
+    tb.loop();
+    vTaskDelay(10 / portTICK_PERIOD_MS); //10ms delay
+  }
+}
 //#################################//
 void setup() {
+  float longtitude = 107.321990;
+  float latitude = 10.694964;
+  tb.sendTelemetryData("longtitude", longtitude);
+  tb.sendTelemetryData("latitude", latitude);
   Serial.begin(SERIAL_DEBUG_BAUD);
   pinMode(LED_PIN, OUTPUT);
   delay(1000);
@@ -264,18 +281,16 @@ void setup() {
 
   Wire.begin(SDA_PIN, SCL_PIN);
   dht20.begin();
-  // initLed();
   
-  // xTaskCreate(gradientEffectTask, "gradientEffectTask", 2048, NULL, 2, NULL);
-  xTaskCreate(connectToWiFi, "connectToWiFi", 4096, NULL, 1, NULL);
+  xTaskCreate(connectToWiFi,      "connectToWiFi",      4096, NULL, 1, NULL);
   xTaskCreate(coreIoTConnectTask, "coreIoTConnectTask", 4096, NULL, 1, NULL);
-  xTaskCreate(sendAtributesTask, "sendAtributesTask", 4096, NULL, 2, NULL);
-  xTaskCreate(sendTelemetryTask, "sendTelemetryTask", 4096, NULL, 2, NULL);
-  xTaskCreate(tbLoopTask, "tbLoopTask", 4096, NULL, 1, NULL);
-  xTaskCreate(neoPixelTask, "neoPixelTask", 2048, NULL, 2, NULL);
-  xTaskCreate(lightSensorTask, "lightSensorTask", 2048, NULL, 2, NULL);
-  xTaskCreate(moisSensorTask, "moisSensorTask", 2048, NULL, 2, NULL);
-  xTaskCreate(pumpTask, "pumpTask", 2048, NULL, 2, NULL);
+  xTaskCreate(sendAtributesTask,  "sendAtributesTask",  4096, NULL, 2, NULL);
+  xTaskCreate(sendTelemetryTask,  "sendTelemetryTask",  4096, NULL, 2, NULL);
+  xTaskCreate(tbLoopTask,         "tbLoopTask",         4096, NULL, 1, NULL);
+  xTaskCreate(neoPixelTask,       "neoPixelTask",       2048, NULL, 2, NULL);
+  // xTaskCreate(lightSensorTask,    "lightSensorTask",    2048, NULL, 2, NULL);
+  // xTaskCreate(moisSensorTask,     "moisSensorTask",     2048, NULL, 2, NULL);
+  xTaskCreate(pumpTask,           "pumpTask",           2048, NULL, 2, NULL);
 }
 
 void loop() {
