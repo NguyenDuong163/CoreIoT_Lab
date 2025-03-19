@@ -31,6 +31,18 @@ RPC_Response setPump(const RPC_Data &data) {
   return RPC_Response("setValue", newState);
 }
 
+void turnOnPump() {
+    pumpState = true;
+    digitalWrite(PUMP_PIN, HIGH);
+    tb.sendTelemetryData("pumpStatus", "ON");
+  }
+  
+void turnOffPump() {
+    pumpState = false;
+    digitalWrite(PUMP_PIN, LOW);
+    tb.sendTelemetryData("pumpStatus", "OFF");
+}
+
 const std::array<RPC_Callback, 1U> pump_callbacks = {
   RPC_Callback{ "setValue", setPump }
 };
