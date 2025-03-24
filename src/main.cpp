@@ -216,27 +216,24 @@ void sendAtributesTask(void *pvParameters) {
 
 void sendTelemetryTask(void *pvParameters) {
   while (true) {
-      // dht20.read();
+      dht20.read();
       
-      // float temperature = dht20.getTemperature();
-      // float humidity = dht20.getHumidity();
+      float temperature = dht20.getTemperature();
+      float humidity = dht20.getHumidity();
       
-      float temperature = 26.0; // fake data
-      float humidity = 20.0;    // fake data
-      // if (isnan(temperature) || isnan(humidity)) {
-      //   Serial.println("Failed to read from DHT20 sensor!");
-      // } else {
-      //   Serial.print("Temperature: ");
-      //   Serial.print(temperature);
-      //   Serial.print(" °C, Humidity: ");
-      //   Serial.print(humidity);
-      //   Serial.println(" %");
+      if (isnan(temperature) || isnan(humidity)) {
+        Serial.println("Failed to read from DHT20 sensor!");
+      } else {
+        Serial.print("Temperature: ");
+        Serial.print(temperature);
+        Serial.print(" °C, Humidity: ");
+        Serial.print(humidity);
+        Serial.println(" %");
 
         tb.sendTelemetryData("temperature", temperature);
         tb.sendTelemetryData("humidity", humidity);
-      //}
-
-      vTaskDelay(2000 / portTICK_PERIOD_MS); //2s delay
+      }
+      vTaskDelay(5000 / portTICK_PERIOD_MS); //2s delay
     }
 }
 
