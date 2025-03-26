@@ -1,5 +1,6 @@
 #include "ExternalLedControl.h"
 #include "PumpControl.h"
+#include "Led_scheduler.h"
 
 #define LED_PIN 48
 #define SDA_PIN GPIO_NUM_11
@@ -49,6 +50,9 @@ constexpr char FW_SIZE[] = "fw_size";
 constexpr char FW_CHECKSUM_ALGORITHM[] = "fw_checksum_algorithm";
 constexpr char FW_URL[] = "fw_url";
 
+constexpr char SCHED_BLINK_LED[] = "sched_blink_led";
+constexpr char SCHED_BLINK_LED_INTERVAL[] = "sched_blink_led_interval";
+constexpr char SCHED_BLINK_LED_DURATION[] = "sched_blink_led_duration";
 
 volatile bool attributesChanged = false;
 
@@ -62,6 +66,9 @@ uint32_t previousDataSend;
 
 constexpr std::array<const char *, EPC_1> SHARED_ATTRIBUTES_LIST = {
   LED_STATE_ATTR,
+  SCHED_BLINK_LED,
+  SCHED_BLINK_LED_INTERVAL,
+  SCHED_BLINK_LED_DURATION,
   FW_TAG,
   FW_VERSION,
   FW_CHECKSUM,
@@ -87,6 +94,10 @@ String currentFwTitle;
 int currentFwSize;
 String currentFwChecksumAlgorithm;
 String currentFwUrl;
+
+bool sched_blink_led = false;
+int sched_blink_led_interval = 5; // 5s
+int sched_blink_led_duration = 60; // 60s
 
 WiFiClient wifiClient;
 Arduino_MQTT_Client mqttClient(wifiClient);
@@ -127,6 +138,21 @@ void processSharedAttributes(const Shared_Attribute_Data &data) {
       digitalWrite(LED_PIN, ledState);
       Serial.print("LED state is set to: ");
       Serial.println(ledState);
+    }
+    if (strcmp(it->key().c_str(), SCHED_BLINK_LED) == 0) {
+      sched_blink_led = it->value().as<bool>();
+      Serial.print("SCHED_BLINK_LED: ");
+      Serial.println(sched_blink_led);
+    }
+    if (strcmp(it->key().c_str(), SCHED_BLINK_LED_INTERVAL) == 0) {
+      sched_blink_led_interval = 1000 * (it->value().as<int>());
+      Serial.print("SCHED_BLINK_LED_INTERVAL: ");
+      Serial.println(it->value().as<int>());
+    }
+    if (strcmp(it->key().c_str(), SCHED_BLINK_LED_DURATION) == 0) {
+      sched_blink_led_duration = 1000 * (it->value().as<int>());
+      Serial.print("SCHED_BLINK_LED_DURATION: ");
+      Serial.println(it->value().as<int>());
     }
     if (strcmp(it->key().c_str(), FW_TAG) == 0) {
       Serial.print("FW Tag: ");
@@ -451,9 +477,10 @@ void setup() {
   xTaskCreate(tbLoopTask,         "tbLoopTask",         8192, NULL, 1, NULL);
   xTaskCreate(neoPixelTask,       "neoPixelTask",       2048, NULL, 2, NULL);
   xTaskCreate(updateFirmwareTask, "updateFirmwareTask", 12288, NULL, 2, NULL);
+  xTaskCreate(ledSchedulerTask,   "ledSchedulerTask",   2048, NULL, 2, NULL);
   // xTaskCreate(lightSensorTask,    "lightSensorTask",    2048, NULL, 2, NULL);
   // xTaskCreate(moisSensorTask,     "moisSensorTask",     2048, NULL, 2, NULL);
-  xTaskCreate(pumpTask,           "pumpTask",           2048, NULL, 2, NULL);
+  // xTaskCreate(pumpTask,           "pumpTask",           2048, NULL, 2, NULL);
 }
 
 void loop() {
